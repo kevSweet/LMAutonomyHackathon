@@ -61,7 +61,16 @@ def get_heading_and_distance():
         target_x = red_base.x
         target_y = red_base.y
     else:
-        # Haven't passed through neutral zone, go there
+        # TODO Add randomness
+        # Haven't passed through (lower) neutral zone, go there
+        #target_x = (0.75 * (max(blue_base.x, red_base.x) 
+        #                  - min(blue_base.x, red_base.x)) 
+        #                  + min(blue_base.x, red_base.x))
+        #target_y = (0.75 * (max(blue_base.y, red_base.y) 
+        #                  - min(blue_base.y, red_base.y)) 
+        #                  + min(blue_base.y, red_base.y))
+
+        # Haven't passed through (upper) neutral zone, go there
         target_x = (0.25 * (max(blue_base.x, red_base.x) 
                           - min(blue_base.x, red_base.x)) 
                           + min(blue_base.x, red_base.x))
