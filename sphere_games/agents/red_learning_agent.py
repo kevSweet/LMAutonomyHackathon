@@ -76,6 +76,7 @@ def Q_learning():
     global Q_table, red_twist, yaw_actions, vel_actions
     expectation = 0.
 
+    #Determine Reward
     heading, distance = get_heading_and_distance()
     current_value = 1 - distance / 1250. # Scale to [1, ~0]
     heading = int(4 * heading / np.pi)   # Convert to range(8)
