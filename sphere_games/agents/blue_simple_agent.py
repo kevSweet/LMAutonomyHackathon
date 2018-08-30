@@ -1,5 +1,6 @@
 import numpy as np
 import rospy
+import random
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Point, Twist, Vector3
 
@@ -12,6 +13,8 @@ blue_twist = Twist()
 game_over = False
 accumulated_error = 0.
 neutral_zone = False
+#initializes path of opponent agent to one of two policies: (lower neutral zone -> 1) (upper neutral zone -> 2)
+neutral_route = random.randint(1,2)
 
 # Helper functions
 def set_center(sphere_center):
@@ -21,7 +24,7 @@ def set_center(sphere_center):
 
 def set_flag(flag_status):
     global blue_flag, neutral_zone
-    # Logic for needing to go back through neutral zone
+    # Logic for needing to go back through neutral zone 
     if blue_flag != flag_status.data:
         neutral_zone = False
     blue_flag = flag_status.data
@@ -61,22 +64,24 @@ def get_heading_and_distance():
         target_x = red_base.x
         target_y = red_base.y
     else:
-        # TODO Add randomness
-        # Haven't passed through (lower) neutral zone, go there
-        #target_x = (0.75 * (max(blue_base.x, red_base.x) 
-        #                  - min(blue_base.x, red_base.x)) 
-        #                  + min(blue_base.x, red_base.x))
-        #target_y = (0.75 * (max(blue_base.y, red_base.y) 
-        #                  - min(blue_base.y, red_base.y)) 
-        #                  + min(blue_base.y, red_base.y))
+        if neutral_route == 1:
 
-        # Haven't passed through (upper) neutral zone, go there
-        target_x = (0.25 * (max(blue_base.x, red_base.x) 
-                          - min(blue_base.x, red_base.x)) 
-                          + min(blue_base.x, red_base.x))
-        target_y = (0.25 * (max(blue_base.y, red_base.y) 
-                          - min(blue_base.y, red_base.y)) 
-                          + min(blue_base.y, red_base.y))
+            #Haven't passed through (lower) neutral zone, go there
+            target_x = (0.75 * (max(blue_base.x, red_base.x) 
+                            - min(blue_base.x, red_base.x)) 
+                            + min(blue_base.x, red_base.x))
+            target_y = (0.75 * (max(blue_base.y, red_base.y) 
+                            - min(blue_base.y, red_base.y)) 
+                            + min(blue_base.y, red_base.y))
+        else:
+            #Haven't passed through (upper) neutral zone, go there
+            target_x = (0.25 * (max(blue_base.x, red_base.x) 
+                            - min(blue_base.x, red_base.x)) 
+                            + min(blue_base.x, red_base.x))
+            target_y = (0.25 * (max(blue_base.y, red_base.y) 
+                            - min(blue_base.y, red_base.y)) 
+                            + min(blue_base.y, red_base.y))
+
     delta_x = target_x - blue_center.x
     delta_y = target_y - blue_center.y
     print("[{}, {}]".format(delta_x, delta_y))
@@ -106,7 +111,7 @@ def proportional_control():
 
 # Init function
 def simple_agent():
-    global game_over
+    global game_over, neutral_route
     # Setup ROS message handling
     rospy.init_node('blue_agent', anonymous=True)
 
@@ -123,6 +128,7 @@ def simple_agent():
         proportional_control()
         pub_blue_cmd.publish(blue_twist)
         if game_over != False:
+            neutral_route = random.randint(1,2)
             break
         rate.sleep()
     print("Game ended. No agent to save.")
