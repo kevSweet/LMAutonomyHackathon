@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import rospy
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int16
 from geometry_msgs.msg import Twist, Point, Vector3
 
 # Global variables
@@ -42,6 +42,16 @@ def set_red_base(base):
     global red_base
     red_base = base
     return
+
+# def set_red_score(score):
+#     global red_score
+#     red_score = score
+#     return
+
+# def set_blue_score(score):
+#     global blue_score
+#     blue_score = score
+#     return
 
 def yaw_vel_to_twist(yaw, vel):
     twist_msg = Twist()
@@ -145,7 +155,9 @@ def learning_agent():
     sub_blue_base = rospy.Subscriber('/blue_sphero/base', Point, set_blue_base, queue_size=1)
     sub_red_base = rospy.Subscriber('/red_sphero/base', Point, set_red_base, queue_size=1)
     sub_game_over = rospy.Subscriber('/game_over', Bool, set_game_over, queue_size=1)
-
+    #sub_red_score = rospy.Subscriber('/red_sphero/score', Int16, set_red_score, queue_size=1)
+    #sub_blue_score = rospy.Subscriber('/blue_sphero/score', Int16, set_blue_score, queue_size=1)
+    
     # Agent control loop
     rate = rospy.Rate(5) # Hz
     while not rospy.is_shutdown():

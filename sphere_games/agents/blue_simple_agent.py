@@ -1,7 +1,7 @@
 import numpy as np
 import rospy
 import random
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int16
 from geometry_msgs.msg import Point, Twist, Vector3
 
 # Global variables
@@ -10,6 +10,9 @@ blue_flag = False
 blue_base = Point()
 red_base = Point()
 blue_twist = Twist()
+blue_score = 0
+red_score = 0
+curBlueScore = 0
 game_over = False
 accumulated_error = 0.
 neutral_zone = False
@@ -45,6 +48,16 @@ def set_red_base(base):
     red_base = base
     return
 
+def set_red_score(score):
+    global red_score
+    red_score = score
+    return
+
+def set_blue_score(score):
+    global blue_score
+    blue_score = score
+    return
+
 def yaw_vel_to_twist(yaw, vel): 
     twist_msg = Twist() 
     twist_msg.linear = Vector3(0, 0, 0) 
@@ -52,6 +65,8 @@ def yaw_vel_to_twist(yaw, vel):
     twist_msg.angular.y = np.sin(yaw) * vel 
     twist_msg.angular.z = 0 
     return twist_msg
+
+
 
 def get_heading_and_distance():
     global blue_center, blue_flag, blue_base, red_base, neutral_zone
@@ -85,6 +100,7 @@ def get_heading_and_distance():
     delta_x = target_x - blue_center.x
     delta_y = target_y - blue_center.y
     print("[{}, {}]".format(delta_x, delta_y))
+    
     distance = np.sqrt(delta_x ** 2 + delta_y ** 2)
     if not neutral_zone and distance < 50:
         neutral_zone = True
@@ -111,7 +127,7 @@ def proportional_control():
 
 # Init function
 def simple_agent():
-    global game_over, neutral_route
+    global game_over, neutral_route, blue_score, curBlueScore
     # Setup ROS message handling
     rospy.init_node('blue_agent', anonymous=True)
 
@@ -121,14 +137,25 @@ def simple_agent():
     sub_blue_base = rospy.Subscriber('/blue_sphero/base', Point, set_blue_base, queue_size=1)
     sub_red_base = rospy.Subscriber('/red_sphero/base', Point, set_red_base, queue_size=1)
     sub_game_over = rospy.Subscriber('/game_over', Bool, set_game_over, queue_size=1)
-
+    sub_red_score = rospy.Subscriber('/red_sphero/score', Int16, set_red_score, queue_size=1)
+    sub_blue_score = rospy.Subscriber('/blue_sphero/score', Int16, set_blue_score, queue_size=1)
+    
+    
     # Agent control loop
     rate = rospy.Rate(2) # Hz
     while not rospy.is_shutdown():
         proportional_control()
         pub_blue_cmd.publish(blue_twist)
-        if game_over != False:
+        print("\n Blue score:" + str(blue_score))
+        print("\n curBlueScore:" + str(curBlueScore))
+        #checks if blue scores to randomly change the next neutral_route
+        if blue_score > curBlueScore:
+            random.seed()
             neutral_route = random.randint(1,2)
+            print("\nAfter randomization:" + str(neutral_route))
+            curBlueScore = blue_score
+            
+        if game_over != False:
             break
         rate.sleep()
     print("Game ended. No agent to save.")
