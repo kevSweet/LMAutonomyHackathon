@@ -12,7 +12,7 @@ red_base = Point()
 blue_twist = Twist()
 blue_score = 0
 red_score = 0
-curBlueScore = 0
+prevBlueScore = 0
 game_over = False
 accumulated_error = 0.
 neutral_zone = False
@@ -50,12 +50,12 @@ def set_red_base(base):
 
 def set_red_score(score):
     global red_score
-    red_score = score
+    red_score = score.data
     return
 
 def set_blue_score(score):
     global blue_score
-    blue_score = score
+    blue_score = score.data
     return
 
 def yaw_vel_to_twist(yaw, vel): 
@@ -127,7 +127,7 @@ def proportional_control():
 
 # Init function
 def simple_agent():
-    global game_over, neutral_route, blue_score, curBlueScore
+    global game_over, neutral_route, blue_score, prevBlueScore
     # Setup ROS message handling
     rospy.init_node('blue_agent', anonymous=True)
 
@@ -146,13 +146,14 @@ def simple_agent():
     while not rospy.is_shutdown():
         proportional_control()
         pub_blue_cmd.publish(blue_twist)
-        print("\n Blue score:" + str(blue_score))
-        print("\n curBlueScore:" + str(curBlueScore))
+        print("\n Blue score:" + str(blue_score) + " datatype: " + str(type(blue_score)))
+        print("\n prevBlueScore:" + str(prevBlueScore) + " datatype: " + str(type(prevBlueScore)))
         #checks if blue scores to randomly change the next neutral_route
-        if Int16(blue_score) > Int16(curBlueScore):
+
+        if blue_score > prevBlueScore:
             neutral_route = random.randint(1,2)
             print("\nAfter randomization:" + str(neutral_route))
-            curBlueScore = blue_score  
+            prevBlueScore = blue_score  
         if game_over != False:
             break
         rate.sleep()
