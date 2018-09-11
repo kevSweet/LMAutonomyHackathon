@@ -11,7 +11,8 @@ red_flag = False
 red_base = Point()
 blue_base = Point()
 game_over = False
-
+blue_score = 0
+red_score = 0
 red_twist = Twist()
 Q_table = {}
 yaw_actions = np.array(list(range(8))) * np.pi / 4
@@ -43,15 +44,15 @@ def set_red_base(base):
     red_base = base
     return
 
-# def set_red_score(score):
-#     global red_score
-#     red_score = score
-#     return
+def set_red_score(score):
+    global red_score
+    red_score = score
+    return
 
-# def set_blue_score(score):
-#     global blue_score
-#     blue_score = score
-#     return
+def set_blue_score(score):
+    global blue_score
+    blue_score = score
+    return
 
 def yaw_vel_to_twist(yaw, vel):
     twist_msg = Twist()
@@ -78,8 +79,13 @@ def get_heading_and_distance():
     delta_x = target_x - red_center.x
     delta_y = target_y - red_center.y
     distance = np.sqrt(delta_x ** 2 + delta_y ** 2)
+    #calculates distance from agent to centerpoint between the two bases (no-go zone)
+    delta_distCx = ((red_base.x + blue_base.x)/2) - red_center.x
+    delta_distCy = ((red_base.y + blue_base.y)/2) - red_center.y
+    distCenter = np.sqrt(delta_distCx ** 2 + delta_distCy ** 2)
     heading = np.arctan2(delta_y, delta_x)
-    return heading, distance
+    return heading, distance, distCenter
+
 
 # Agent function
 def Q_learning():
@@ -87,8 +93,8 @@ def Q_learning():
     expectation = 0.
 
     # Determine Reward
-    heading, distance = get_heading_and_distance()
-    current_value = 1 - distance / 1250. # Scale to [1, ~0]
+    heading, distance, distCenter = get_heading_and_distance()
+    current_value = (1 - distance / 1250) - (1 - distCenter / 1250) * .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
     heading = int(4 * heading / np.pi)   # Convert to range(8)
     distance = int(8 * distance / 1250.)  # Convert to range(8)
 
@@ -139,7 +145,7 @@ def Q_learning():
 def learning_agent():
     # Load any existing agent
     global Q_table, game_over
-    agent_file = 'test_agent.npy'
+    agent_file = 'new_test_agent.npy'
     if os.path.isfile(agent_file):
         Q_table = parse_dict(np.load(agent_file))
         print("Loaded red agent from file.")
@@ -155,8 +161,8 @@ def learning_agent():
     sub_blue_base = rospy.Subscriber('/blue_sphero/base', Point, set_blue_base, queue_size=1)
     sub_red_base = rospy.Subscriber('/red_sphero/base', Point, set_red_base, queue_size=1)
     sub_game_over = rospy.Subscriber('/game_over', Bool, set_game_over, queue_size=1)
-    #sub_red_score = rospy.Subscriber('/red_sphero/score', Int16, set_red_score, queue_size=1)
-    #sub_blue_score = rospy.Subscriber('/blue_sphero/score', Int16, set_blue_score, queue_size=1)
+    sub_red_score = rospy.Subscriber('/red_sphero/score', Int16, set_red_score, queue_size=1)
+    sub_blue_score = rospy.Subscriber('/blue_sphero/score', Int16, set_blue_score, queue_size=1)
     
     # Agent control loop
     rate = rospy.Rate(5) # Hz

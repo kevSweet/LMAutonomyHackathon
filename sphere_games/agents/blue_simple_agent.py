@@ -149,12 +149,10 @@ def simple_agent():
         print("\n Blue score:" + str(blue_score))
         print("\n curBlueScore:" + str(curBlueScore))
         #checks if blue scores to randomly change the next neutral_route
-        if blue_score > curBlueScore:
-            random.seed()
+        if Int16(blue_score) > Int16(curBlueScore):
             neutral_route = random.randint(1,2)
             print("\nAfter randomization:" + str(neutral_route))
-            curBlueScore = blue_score
-            
+            curBlueScore = blue_score  
         if game_over != False:
             break
         rate.sleep()
