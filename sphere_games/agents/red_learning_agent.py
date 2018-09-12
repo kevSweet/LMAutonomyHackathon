@@ -13,10 +13,16 @@ blue_base = Point()
 game_over = False
 blue_score = 0
 red_score = 0
+prev_red_score = 0
 red_twist = Twist()
 Q_table = {}
 yaw_actions = np.array(list(range(8))) * np.pi / 4
 vel_actions = np.array(list(range(1, 2))) * 15 # One speed
+center_nogo = 0
+# Current Ration Inches-To-Pixels is 45in:882pixels
+# Sphero Radius Value goes from 1in -> 20 pixels
+sphero_radius = 20
+current_game_counter = 1
 
 # Helper functions
 def set_center(sphere_center):
@@ -46,12 +52,17 @@ def set_red_base(base):
 
 def set_red_score(score):
     global red_score
-    red_score = score
+    red_score = score.data
     return
 
 def set_blue_score(score):
     global blue_score
-    blue_score = score
+    blue_score = score.data
+    return
+
+def set_current_game_counter(game_counter):
+    global current_game_counter
+    current_game_counter = game_counter.data
     return
 
 def yaw_vel_to_twist(yaw, vel):
@@ -89,15 +100,23 @@ def get_heading_and_distance():
 
 # Agent function
 def Q_learning():
-    global Q_table, red_twist, yaw_actions, vel_actions
+    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo
     expectation = 0.
 
+    #captures scoring event
+    if(red_score > prev_red_score):
+        #TODO increment 25 remembered qvalues in table with reward value of 0.1
+        prev_red_score = red_score
+        
     # Determine Reward
     heading, distance, distCenter = get_heading_and_distance()
-    current_value = (1 - distance / 1250) - (1 - distCenter / 1250) * .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
+    current_value = (1 - distance / 1250) 
+    if distCenter < center_nogo:
+        current_value = current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
+    
     heading = int(4 * heading / np.pi)   # Convert to range(8)
     distance = int(8 * distance / 1250.)  # Convert to range(8)
-
+    
     if 'previous_value' in Q_table:
         previous_value = Q_table['previous_value']
         previous_grid = Q_table['previous_grid']
@@ -131,20 +150,24 @@ def Q_learning():
         Q_table[(heading, distance)] = {}
     if (yaw_choice, vel_choice) not in Q_table[(heading, distance)]:
         Q_table[(heading, distance)][(yaw_choice, vel_choice)] = 0.
-    Q_table['previous_value'] = current_value
-    Q_table['previous_grid'] = (heading, distance)
-    Q_table['previous_choice'] = (yaw_choice, vel_choice)
-
+    Q_table['previous_value'] = current_value #reward
+    Q_table['previous_grid'] = (heading, distance) #state
+    Q_table['previous_choice'] = (yaw_choice, vel_choice) #action
+    
     print("Yaw: {}, Vel: {}, Value: {}".format(yaw_choice, vel_choice, 
         current_value))
     yaw_choice = -yaw_choice # Switch from camera to world coordinates
     red_twist = yaw_vel_to_twist(yaw_choice, vel_choice)
+
+    
     return
 
 # Init function
 def learning_agent():
     # Load any existing agent
-    global Q_table, game_over
+    global Q_table, game_over, red_base, blue_base, current_game_counter
+     
+    
     agent_file = 'new_test_agent.npy'
     if os.path.isfile(agent_file):
         Q_table = parse_dict(np.load(agent_file))
@@ -163,12 +186,22 @@ def learning_agent():
     sub_game_over = rospy.Subscriber('/game_over', Bool, set_game_over, queue_size=1)
     sub_red_score = rospy.Subscriber('/red_sphero/score', Int16, set_red_score, queue_size=1)
     sub_blue_score = rospy.Subscriber('/blue_sphero/score', Int16, set_blue_score, queue_size=1)
+    sub_current_game_counter = rospy.Subscriber('/current_game_counter', Int16, set_current_game_counter, queue_size=1)
     
+    previous_game_counter = current_game_counter
+    
+    #calculate size of circular no-go zone around center obstacle
+    sphero_radius = (red_base.x - blue_base.x) * (1 / 48)
+    center_nogo = (red_base.x - blue_base.x)*.25/2 + sphero_radius
+
     # Agent control loop
     rate = rospy.Rate(5) # Hz
     while not rospy.is_shutdown():
         Q_learning()
         pub_red_cmd.publish(red_twist)
+        if current_game_counter > previous_game_counter:
+            np.save(agent_file, Q_table)
+            previous_game_counter = current_game_counter
         if game_over != False:
             break
         rate.sleep()

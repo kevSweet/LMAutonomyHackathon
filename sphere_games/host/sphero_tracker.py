@@ -22,7 +22,7 @@ blue_score = 0
 
 counter = 0
 
-start = time.time()
+
 
 def receive_image(image_data):
     global red_center, blue_center, counter
@@ -145,6 +145,7 @@ def pub_sub_init():
     rospy.init_node('sphere_tracker', anonymous=True)
 
     rate = rospy.Rate(10) # Hz
+    start = time.time()
     while not rospy.is_shutdown():
         host()
 
