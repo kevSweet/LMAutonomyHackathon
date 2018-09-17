@@ -8,7 +8,7 @@ from std_msgs.msg import Bool, Int16
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
 #Constants
-NUM_GAMES = 264
+NUM_GAMES = 1
 GAME_LENGTH = 300
 
 # Capture the Flag base configuration

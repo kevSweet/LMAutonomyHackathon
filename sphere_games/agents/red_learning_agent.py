@@ -106,6 +106,7 @@ def Q_learning():
     #captures scoring event
     if(red_score > prev_red_score):
         #TODO increment 25 remembered qvalues in table with reward value of 0.1
+        #TODO reward faster times between scores
         prev_red_score = red_score
         
     # Determine Reward
@@ -125,8 +126,76 @@ def Q_learning():
         Q_value = Q_table[previous_grid][previous_choice]
         Q_table[previous_grid][previous_choice] += reward
 
+    
     if (np.random.random() < 0.2 
-        or (heading, distance) not in Q_table):
+        or  (heading, distance) not in Q_table):
+        yaw_choice = np.random.choice(yaw_actions)
+        vel_choice = np.random.choice(vel_actions)
+    else:
+        options = Q_table[(heading, distance)].keys()
+        highest = options[0]
+        highest_value = -1000
+        for option in options:
+            option_value = Q_table[(heading, distance)][option]
+            if option_value > highest_value:
+                highest = option
+                highest_value = option_value
+        if highest_value > 0:
+            print(highest_value)
+            yaw_choice, vel_choice = highest
+            expectation = highest_value
+        else:
+            yaw_choice = np.random.choice(yaw_actions)
+            vel_choice = np.random.choice(vel_actions)
+
+    if (heading, distance) not in Q_table:
+        Q_table[(heading, distance)] = {}
+    if (yaw_choice, vel_choice) not in Q_table[(heading, distance)]:
+        Q_table[(heading, distance)][(yaw_choice, vel_choice)] = 0.
+    Q_table['previous_value'] = current_value #reward
+    Q_table['previous_grid'] = (heading, distance) #state
+    Q_table['previous_choice'] = (yaw_choice, vel_choice) #action
+    
+    print("Yaw: {}, Vel: {}, Value: {}".format(yaw_choice, vel_choice, 
+        current_value))
+    yaw_choice = -yaw_choice # Switch from camera to world coordinates
+    red_twist = yaw_vel_to_twist(yaw_choice, vel_choice)
+
+    
+    return
+
+def Q_learningV2():
+    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo
+    expectation = 0.
+
+    #captures scoring event
+    if(red_score > prev_red_score):
+        #TODO increment 25 remembered qvalues in table with reward value of 0.1
+        #TODO reward faster times between scores
+        #TODO create circles around bad zones 
+        #TODO combos and DOE to find best combination
+        prev_red_score = red_score
+        
+    # Determine Reward
+    heading, distance, distCenter = get_heading_and_distance()
+    current_value = (1 - distance / 1250) 
+    if distCenter < center_nogo:
+        current_value = current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
+    
+    heading = int(4 * heading / np.pi)   # Convert to range(8)
+    distance = int(8 * distance / 1250.)  # Convert to range(8)
+    
+    if 'previous_value' in Q_table:
+        previous_value = Q_table['previous_value']
+        previous_grid = Q_table['previous_grid']
+        previous_choice = Q_table['previous_choice']
+        reward = (current_value - previous_value) - 0.005
+        Q_value = Q_table[previous_grid][previous_choice]
+        Q_table[previous_grid][previous_choice] += reward
+
+    
+    if (np.random.random() < 0.2 
+        or  (heading, distance) not in Q_table):
         yaw_choice = np.random.choice(yaw_actions)
         vel_choice = np.random.choice(vel_actions)
     else:
@@ -189,7 +258,7 @@ def learning_agent():
     sub_current_game_counter = rospy.Subscriber('/current_game_counter', Int16, set_current_game_counter, queue_size=1)
     
     previous_game_counter = current_game_counter
-    
+
     #calculate size of circular no-go zone around center obstacle
     sphero_radius = (red_base.x - blue_base.x) * (1 / 48)
     center_nogo = (red_base.x - blue_base.x)*.25/2 + sphero_radius
@@ -197,7 +266,7 @@ def learning_agent():
     # Agent control loop
     rate = rospy.Rate(5) # Hz
     while not rospy.is_shutdown():
-        Q_learning()
+        Q_learningV2()
         pub_red_cmd.publish(red_twist)
         if current_game_counter > previous_game_counter:
             np.save(agent_file, Q_table)
