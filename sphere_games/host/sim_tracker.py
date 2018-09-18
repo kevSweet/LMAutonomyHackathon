@@ -135,7 +135,7 @@ def pub_sub_init():
 
     rospy.init_node('sphere_tracker', anonymous=True)
 
-    rate = rospy.Rate(10) # Hz
+    rate = rospy.Rate(1600) # Hz
     while not rospy.is_shutdown():
         host()
 
