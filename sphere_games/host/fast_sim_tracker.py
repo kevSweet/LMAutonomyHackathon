@@ -23,6 +23,8 @@ blue_score = 0
 
 counter = 0
 
+ros_rate = os.environ['ROS_RATE']
+
 start = time.time()
 
 def receive_image(image_data):
@@ -136,7 +138,7 @@ def pub_sub_init():
 
     rospy.init_node('sphere_tracker', anonymous=True)
 
-    rate = rospy.Rate(10) # Hz
+    rate = rospy.Rate(1600) # Hz
     while not rospy.is_shutdown():
         host()
 
