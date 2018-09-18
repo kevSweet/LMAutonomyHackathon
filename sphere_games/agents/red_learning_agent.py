@@ -24,6 +24,10 @@ center_nogo = 0
 sphero_radius = 20
 current_game_counter = 1
 
+gridBuffer = {}
+choiceBuffer = {}
+buffCounter = 0
+
 # Helper functions
 def set_center(sphere_center):
     global red_center
@@ -165,22 +169,28 @@ def Q_learning():
     return
 
 def Q_learningV2():
-    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo
+    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo, buffCounter, choiceBuffer, gridBuffer
     expectation = 0.
 
+    #Chose 10 actions because program would crash if agent scores without buffer being fully populated
+    #Assumed impossible to score in <2s therefore chose 10 commands @5Hz
+    SIZEOFBUFFER = 10
+    
     #captures scoring event
     if(red_score > prev_red_score):
-        #TODO increment 25 remembered qvalues in table with reward value of 0.1
         #TODO reward faster times between scores
         #TODO create circles around bad zones 
         #TODO combos and DOE to find best combination
+        for entry in gridBuffer:
+            Q_table[gridBuffer[entry]][choiceBuffer[entry]] += 0.1
+            print('This is the new reward: ' + str(Q_table[gridBuffer[entry]][choiceBuffer[entry]]))
         prev_red_score = red_score
         
     # Determine Reward
     heading, distance, distCenter = get_heading_and_distance()
     current_value = (1 - distance / 1250) 
-    if distCenter < center_nogo:
-        current_value = current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
+    if distCenter < center_nogo: # Scale
+        current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
     
     heading = int(4 * heading / np.pi)   # Convert to range(8)
     distance = int(8 * distance / 1250.)  # Convert to range(8)
@@ -222,7 +232,12 @@ def Q_learningV2():
     Q_table['previous_value'] = current_value #reward
     Q_table['previous_grid'] = (heading, distance) #state
     Q_table['previous_choice'] = (yaw_choice, vel_choice) #action
-    
+
+    #populates the buffer of size SIZEOFBUFFER
+    choiceBuffer[buffCounter%SIZEOFBUFFER] = (yaw_choice, vel_choice)
+    gridBuffer[buffCounter%SIZEOFBUFFER] = (heading, distance)
+    buffCounter += 1
+
     print("Yaw: {}, Vel: {}, Value: {}".format(yaw_choice, vel_choice, 
         current_value))
     yaw_choice = -yaw_choice # Switch from camera to world coordinates
@@ -236,7 +251,6 @@ def learning_agent():
     # Load any existing agent
     global Q_table, game_over, red_base, blue_base, current_game_counter
      
-    
     agent_file = 'new_test_agent.npy'
     if os.path.isfile(agent_file):
         Q_table = parse_dict(np.load(agent_file))
