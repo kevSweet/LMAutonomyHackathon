@@ -5,9 +5,12 @@ import rospy
 import cv2
 import os
 
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int16
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
+#Constants
+NUM_GAMES = 1
+GAME_LENGTH = 300
 
 # Capture the Flag base configuration
 print("Starting Capture the Flag")
@@ -21,14 +24,20 @@ blue_flag = False
 red_score = 0
 blue_score = 0
 
-counter = 0
-
-ros_rate = os.environ['ROS_RATE']
-
-start = time.time()
+def print_game_results_tofile():
+    global red_score, blue_score
+    filename = 'results.txt'
+    with open(filename, 'a') as filehandle:
+        if blue_score > red_score:
+            filehandle.write("Winner: Blue Team ")
+        elif blue_score < red_score:
+            filehandle.write("Winner: Red Team ")
+        else:
+            filehandle.write("Draw! ")
+        filehandle.write("Final Score - Red: {}, Blue: {}\n".format(red_score, blue_score))
 
 def receive_image(image_data):
-    global red_center, blue_center, counter
+    global red_center, blue_center
 
     image_array = np.fromstring(image_data.data, np.uint8)
     cv2_image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
@@ -64,11 +73,6 @@ def receive_image(image_data):
         blue_M = cv2.moments(max(blue_contours, key=cv2.contourArea))
         blue_center = Point(int(blue_M['m10'] / blue_M['m00']), int(blue_M['m01'] / blue_M['m00']), 0)
 
-    counter += 1
-    # if counter % 5 == 0:
-    # cv2.imwrite('images/{0:08d}.png'.format(counter), cv2_image)
-    # cv2.imshow('cv2_image', cv2_image)
-    # cv2.waitKey(2)
     return
 
 # Scoring logic
@@ -124,6 +128,7 @@ def host():
 
 def pub_sub_init():
     global red_center, blue_center, red_flag, blue_flag, red_score, blue_score
+    current_game_counter = 1
 
     pub_red_center = rospy.Publisher('/red_sphero/center', Point, queue_size=1)
     pub_blue_center = rospy.Publisher('/blue_sphero/center', Point, queue_size=1)
@@ -131,6 +136,9 @@ def pub_sub_init():
     pub_blue_base = rospy.Publisher('/blue_sphero/base', Point, queue_size=1)
     pub_red_flag = rospy.Publisher('/red_sphero/flag', Bool, queue_size=1)
     pub_blue_flag = rospy.Publisher('/blue_sphero/flag', Bool, queue_size=1)
+    pub_red_score = rospy.Publisher('/red_sphero/score', Int16, queue_size=1)
+    pub_blue_score = rospy.Publisher('/blue_sphero/score', Int16, queue_size=1)
+    pub_current_game_counter = rospy.Publisher('/current_game_counter', Int16, queue_size=1)
 
     pub_game_over = rospy.Publisher('/game_over', Bool, queue_size=1)
 
@@ -139,26 +147,35 @@ def pub_sub_init():
     rospy.init_node('sphere_tracker', anonymous=True)
 
     rate = rospy.Rate(1600) # Hz
+    start = time.time()
     while not rospy.is_shutdown():
         host()
-
         pub_red_center.publish(red_center)
         pub_blue_center.publish(blue_center)
         pub_red_base.publish(red_base)
         pub_blue_base.publish(blue_base)
         pub_red_flag.publish(red_flag)
         pub_blue_flag.publish(blue_flag)
+        pub_red_score.publish(red_score)
+        pub_blue_score.publish(blue_score)
         pub_game_over.publish(False)
 
-        print("Time: {} / 300".format(time.time() - start))
+        #print("Time: {} / {}".format(time.time() - start), GAME_LENGTH)
         print("Red: [{}, {}], [{}, {}]".format(red_center.x, red_center.y, 
             red_flag, red_score))
         print("Blue: [{}, {}], [{}, {}]".format(blue_center.x, blue_center.y, 
             blue_flag, blue_score))
 
-        if time.time() - start > 300:
-            pub_game_over.publish(True)
-            break
+        if time.time() - start > GAME_LENGTH:
+            print_game_results_tofile()
+            if current_game_counter >= NUM_GAMES:
+                pub_game_over.publish(True)
+                break
+            else:
+                current_game_counter += 1
+                red_score = 0
+                blue_score = 0
+                start = time.time()
 
         rate.sleep()
 
@@ -169,6 +186,7 @@ def pub_sub_init():
     else:
         print("Draw!")
     print("Final Score - Red: {}, Blue: {}".format(red_score, blue_score))
+
     return
 
 if __name__ == '__main__':
