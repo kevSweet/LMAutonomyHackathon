@@ -3,14 +3,15 @@ import time
 import numpy as np
 import rospy
 import cv2
-import os
 
 from std_msgs.msg import Bool, Int16
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
 #Constants
 NUM_GAMES = 1
-GAME_LENGTH = 300
+GAME_LENGTH = 60
+
+ROS_RATE_MULTIPLIER=int(os.environ['ROS_RATE_MULTIPLIER'])
 
 # Capture the Flag base configuration
 print("Starting Capture the Flag")
@@ -160,11 +161,12 @@ def pub_sub_init():
         pub_blue_score.publish(blue_score)
         pub_game_over.publish(False)
 
-        #print("Time: {} / {}".format(time.time() - start), GAME_LENGTH)
-        print("Red: [{}, {}], [{}, {}]".format(red_center.x, red_center.y, 
-            red_flag, red_score))
-        print("Blue: [{}, {}], [{}, {}]".format(blue_center.x, blue_center.y, 
-            blue_flag, blue_score))
+        #print("Time: {} / {}".format((time.time() - start), GAME_LENGTH))
+        #print("Red: [{}, {}], [{}, {}]".format(red_center.x, red_center.y, 
+        #    red_flag, red_score))
+        #print("Blue: [{}, {}], [{}, {}]".format(blue_center.x, blue_center.y, 
+        #    blue_flag, blue_score))
+        print(ROS_RATE_MULTIPLIER)
 
         if time.time() - start > GAME_LENGTH:
             print_game_results_tofile()

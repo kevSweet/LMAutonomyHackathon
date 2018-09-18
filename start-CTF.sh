@@ -1,4 +1,5 @@
 #!/bin/bash
+export ROS_RATE_MULTIPLIER='1'
 lxterminal --command="bash -i -c 'roscore'"
 sleep 3
 lxterminal --command="bash -i -c 'source /usr/share/gazebo/setup.sh && vglrun rosrun gazebo_ros gazebo /home/hackathon-user/Desktop/LMAutonomyHackathon/sphere_games/arenas/ctf_1v1_arena.world --verbose'"
