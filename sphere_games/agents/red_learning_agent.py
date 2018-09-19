@@ -1,4 +1,5 @@
 import os
+import time
 
 import numpy as np
 import rospy
@@ -19,6 +20,7 @@ red_base = Point()
 blue_base = Point()
 game_over = False
 blue_score = 0
+prev_blue_score = 0
 red_score = 0
 prev_red_score = 0
 red_twist = Twist()
@@ -30,6 +32,8 @@ center_nogo = 0
 # Sphero Radius Value goes from 1in -> 20 pixels
 sphero_radius = 20
 current_game_counter = 1
+start_time = time.time()
+longest_time = 30.0
 
 gridBuffer = {}
 choiceBuffer = {}
@@ -111,21 +115,34 @@ def get_heading_and_distance():
 
 # Agent function
 def Q_learning():
-    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo
+    global Q_table, red_twist, yaw_actions, vel_actions, center_nogo
+    global red_score, prev_red_score, blue_score, prev_blue_score
+    global start_time, longest_time
     expectation = 0.
 
-    #captures scoring event
-    if(red_score > prev_red_score):
-        #TODO increment 25 remembered qvalues in table with reward value of 0.1
-        #TODO reward faster times between scores
+    # Resets capture time when someone scores
+    if(red_score > prev_red_score or blue_score > prev_blue_score):
         prev_red_score = red_score
-        
+        prev_blue_score = blue_score
+        start_time = time.time()
+
     # Determine Reward
     heading, distance, distCenter = get_heading_and_distance()
+    
+    #initial reward function, seek goal
     current_value = (1 - distance / 1250) 
+    
+    # avoid center capability
     if distCenter < center_nogo:
         current_value = current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
     
+    # reward negatively impacted for longer times
+    current_duration = time.time() - start_time
+    if (current_duration > longest_time):
+        #update longest time if it changes
+        longest_time = current_duration
+    current_value -= (current_value * (current_duration/longest_time))
+
     heading = int(4 * heading / np.pi)   # Convert to range(8)
     distance = int(8 * distance / 1250.)  # Convert to range(8)
     
@@ -287,7 +304,7 @@ def learning_agent():
     # Agent control loop
     rate = rospy.Rate(5*ROS_RATE_MULTIPLIER) # Hz
     while not rospy.is_shutdown():
-        Q_learningV2()
+        Q_learning()
         pub_red_cmd.publish(red_twist)
         if current_game_counter > previous_game_counter:
             np.save(agent_file, Q_table)

@@ -11,7 +11,7 @@ from geometry_msgs.msg import Point
 
 #Constants
 NUM_GAMES = 1
-GAME_LENGTH = 60
+GAME_LENGTH = 30
 
 parser = argparse.ArgumentParser(description='Process input Ros Rate Mult.')
 parser.add_argument('integers', metavar='N', type=int, nargs='?',
@@ -30,6 +30,7 @@ red_flag = False
 blue_flag = False
 red_score = 0
 blue_score = 0
+red_start_time = time.time()
 
 def print_game_results_tofile():
     global red_score, blue_score
@@ -42,6 +43,16 @@ def print_game_results_tofile():
         else:
             filehandle.write("Draw! ")
         filehandle.write("Final Score - Red: {}, Blue: {}\n".format(red_score, blue_score))
+
+def print_time_to_score_tofile():
+    global red_start_time
+    filename = 'time_to_score.txt'
+    with open(filename, 'a') as filehandle:
+        filehandle.write("{}\n".format(time.time() - red_start_time))
+
+def reset_red_start_time():
+    global red_start_time
+    red_start_time = time.time()
 
 def receive_image(image_data):
     global red_center, blue_center
@@ -118,14 +129,19 @@ def host():
         blue_score += 1
         red_flag = False
         blue_flag = False
+        print_time_to_score_tofile()
+        reset_red_start_time()
     elif red_at_home:
         red_score += 1
         red_flag = False
         blue_flag = False
+        print_time_to_score_tofile()
+        reset_red_start_time()
     elif blue_at_home:
         blue_score += 1
         red_flag = False
         blue_flag = False
+        reset_red_start_time()
     else:
         if red_at_away:
             red_flag = True
