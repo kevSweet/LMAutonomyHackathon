@@ -2,8 +2,15 @@ import os
 
 import numpy as np
 import rospy
+import argparse
 from std_msgs.msg import Bool, Int16
 from geometry_msgs.msg import Twist, Point, Vector3
+
+parser = argparse.ArgumentParser(description='Process input Ros Rate Mult.')
+parser.add_argument('integers', metavar='N', type=int, nargs='?',
+                   help='an integer for the accumulator', default=1)
+args = parser.parse_args()
+ROS_RATE_MULTIPLIER=args.integers
 
 # Global variables
 red_center = Point()
@@ -278,7 +285,7 @@ def learning_agent():
     center_nogo = (red_base.x - blue_base.x)*.25/2 + sphero_radius
 
     # Agent control loop
-    rate = rospy.Rate(5) # Hz
+    rate = rospy.Rate(5*ROS_RATE_MULTIPLIER) # Hz
     while not rospy.is_shutdown():
         Q_learningV2()
         pub_red_cmd.publish(red_twist)

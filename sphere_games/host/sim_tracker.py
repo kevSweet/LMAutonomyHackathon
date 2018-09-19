@@ -8,6 +8,7 @@ import argparse
 from std_msgs.msg import Bool, Int16
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
+
 #Constants
 NUM_GAMES = 1
 GAME_LENGTH = 60
@@ -15,7 +16,6 @@ GAME_LENGTH = 60
 parser = argparse.ArgumentParser(description='Process input Ros Rate Mult.')
 parser.add_argument('integers', metavar='N', type=int, nargs='?',
                    help='an integer for the accumulator', default=1)
-
 args = parser.parse_args()
 ROS_RATE_MULTIPLIER=args.integers
 
@@ -153,7 +153,7 @@ def pub_sub_init():
 
     rospy.init_node('sphere_tracker', anonymous=True)
 
-    rate = rospy.Rate(10) # Hz
+    rate = rospy.Rate(10 * ROS_RATE_MULTIPLIER) # Hz
     start = time.time()
     while not rospy.is_shutdown():
         host()
@@ -167,12 +167,11 @@ def pub_sub_init():
         pub_blue_score.publish(blue_score)
         pub_game_over.publish(False)
 
-        #print("Time: {} / {}".format((time.time() - start), GAME_LENGTH))
-        #print("Red: [{}, {}], [{}, {}]".format(red_center.x, red_center.y, 
-        #    red_flag, red_score))
-        #print("Blue: [{}, {}], [{}, {}]".format(blue_center.x, blue_center.y, 
-        #    blue_flag, blue_score))
-        print(ROS_RATE_MULTIPLIER)
+        print("Time: {} / {}".format((time.time() - start), GAME_LENGTH))
+        print("Red: [{}, {}], [{}, {}]".format(red_center.x, red_center.y, 
+            red_flag, red_score))
+        print("Blue: [{}, {}], [{}, {}]".format(blue_center.x, blue_center.y, 
+            blue_flag, blue_score))
 
         if time.time() - start > GAME_LENGTH:
             print_game_results_tofile()

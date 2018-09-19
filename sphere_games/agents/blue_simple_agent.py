@@ -1,8 +1,15 @@
 import numpy as np
 import rospy
 import random
+import argparse
 from std_msgs.msg import Bool, Int16
 from geometry_msgs.msg import Point, Twist, Vector3
+
+parser = argparse.ArgumentParser(description='Process input Ros Rate Mult.')
+parser.add_argument('integers', metavar='N', type=int, nargs='?',
+                   help='an integer for the accumulator', default=1)
+args = parser.parse_args()
+ROS_RATE_MULTIPLIER=args.integers
 
 # Global variables
 blue_center = Point()
@@ -142,7 +149,7 @@ def simple_agent():
     
     
     # Agent control loop
-    rate = rospy.Rate(2) # Hz
+    rate = rospy.Rate(2*ROS_RATE_MULTIPLIER) # Hz
     while not rospy.is_shutdown():
         proportional_control()
         pub_blue_cmd.publish(blue_twist)
