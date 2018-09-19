@@ -3,6 +3,7 @@ import time
 import numpy as np
 import rospy
 import cv2
+import argparse
 
 from std_msgs.msg import Bool, Int16
 from sensor_msgs.msg import CompressedImage
@@ -11,7 +12,12 @@ from geometry_msgs.msg import Point
 NUM_GAMES = 1
 GAME_LENGTH = 60
 
-ROS_RATE_MULTIPLIER=int(os.environ['ROS_RATE_MULTIPLIER'])
+parser = argparse.ArgumentParser(description='Process input Ros Rate Mult.')
+parser.add_argument('integers', metavar='N', type=int, nargs='?',
+                   help='an integer for the accumulator', default=1)
+
+args = parser.parse_args()
+ROS_RATE_MULTIPLIER=args.integers
 
 # Capture the Flag base configuration
 print("Starting Capture the Flag")
