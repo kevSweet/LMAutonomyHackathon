@@ -35,9 +35,11 @@ current_game_counter = 1
 start_time = time.time()
 longest_time = 100.0
 
+#For V2 Learner
 gridBuffer = {}
 choiceBuffer = {}
 buffCounter = 0
+betweenScoresTime = time.time()
 
 # Helper functions
 def set_center(sphere_center):
@@ -193,7 +195,7 @@ def Q_learning():
     return
 
 def Q_learningV2():
-    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo, buffCounter, choiceBuffer, gridBuffer
+    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo, buffCounter, choiceBuffer, gridBuffer, betweenScoresTime
     expectation = 0.
 
     #Chose 10 actions because program would crash if agent scores without buffer being fully populated
@@ -206,8 +208,9 @@ def Q_learningV2():
         #TODO create circles around bad zones 
         #TODO combos and DOE to find best combination
         for entry in gridBuffer:
-            Q_table[gridBuffer[entry]][choiceBuffer[entry]] += 0.1
+            Q_table[gridBuffer[entry]][choiceBuffer[entry]] += 1/(time.time() - betweenScoresTime)
             print('This is the new reward: ' + str(Q_table[gridBuffer[entry]][choiceBuffer[entry]]))
+        betweenScoresTime = time.time()
         prev_red_score = red_score
         
     # Determine Reward
@@ -275,7 +278,7 @@ def learning_agent():
     # Load any existing agent
     global Q_table, game_over, red_base, blue_base, current_game_counter
      
-    agent_file = 'new_test_agent.npy'
+    agent_file = 'kevin_test_agent.npy'
     if os.path.isfile(agent_file):
         Q_table = parse_dict(np.load(agent_file))
         print("Loaded red agent from file.")
