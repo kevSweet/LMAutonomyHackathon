@@ -33,7 +33,7 @@ center_nogo = 0
 sphero_radius = 20
 current_game_counter = 1
 start_time = time.time()
-longest_time = 30.0
+longest_time = 100.0
 
 gridBuffer = {}
 choiceBuffer = {}

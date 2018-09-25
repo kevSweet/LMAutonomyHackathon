@@ -11,7 +11,7 @@ from geometry_msgs.msg import Point
 
 #Constants
 NUM_GAMES = 1
-GAME_LENGTH = 30
+GAME_LENGTH = 36180
 
 parser = argparse.ArgumentParser(description='Process input Ros Rate Mult.')
 parser.add_argument('integers', metavar='N', type=int, nargs='?',
