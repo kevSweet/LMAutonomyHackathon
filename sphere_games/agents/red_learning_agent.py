@@ -228,7 +228,7 @@ def Q_learningV2():
         Q_table[previous_grid][previous_choice] += reward
 
     
-    if (np.random.random() < 0.2 
+    if (np.random.random() < 0.2 * 
         or  (heading, distance) not in Q_table):
         yaw_choice = np.random.choice(yaw_actions)
         vel_choice = np.random.choice(vel_actions)
