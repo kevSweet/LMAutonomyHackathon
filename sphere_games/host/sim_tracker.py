@@ -32,6 +32,15 @@ red_score = 0
 blue_score = 0
 red_start_time = time.time()
 
+def timestamp_output_files():
+    filename = 'time_to_score.txt'
+    with open(filename, 'a') as filehandle:
+        filehandle.write(time.strftime("Finsihed Running at " + "%Y-%m-%d %H:%M") + "\n")
+        
+    filename = 'results.txt'
+    with open(filename, 'a') as filehandle:
+        filehandle.write(time.strftime("Finsihed Running at " + "%Y-%m-%d %H:%M") + "\n")
+
 def print_game_results_tofile():
     global red_score, blue_score
     filename = 'results.txt'
@@ -192,6 +201,7 @@ def pub_sub_init():
         if time.time() - start > GAME_LENGTH:
             print_game_results_tofile()
             if current_game_counter >= NUM_GAMES:
+                timestamp_output_files()
                 pub_game_over.publish(True)
                 break
             else:
