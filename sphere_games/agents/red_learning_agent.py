@@ -23,6 +23,9 @@ blue_score = 0
 prev_blue_score = 0
 red_score = 0
 prev_red_score = 0
+red_last_score = True
+prev_red_flag = False
+countLoopforBuffer = False
 red_twist = Twist()
 Q_table = {}
 yaw_actions = np.array(list(range(8))) * np.pi / 4
@@ -115,106 +118,30 @@ def get_heading_and_distance():
 
 # Agent function
 def Q_learning():
-    global Q_table, red_twist, yaw_actions, vel_actions, center_nogo
-    global red_score, prev_red_score, blue_score, prev_blue_score
-    global start_time, longest_time
+    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score
+    global center_nogo, buffCounter, choiceBuffer, gridBuffer, takeRecord, countLoopforBuffer
+    global prev_blue_score, blue_score, start_time, red_last_score, prev_red_flag
     expectation = 0.
-
-    # Resets capture time when someone scores
-    if(red_score > prev_red_score or blue_score > prev_blue_score):
-        prev_red_score = red_score
-        prev_blue_score = blue_score
-        start_time = time.time()
-
-    # Determine Reward
-    heading, distance, distCenter = get_heading_and_distance()
     
-    #initial reward function, seek goal
-    current_value = (1 - distance / 1250) 
-    
-    # avoid center capability
-    if distCenter < center_nogo:
-        current_value = current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
-    
-    # reward negatively impacted for longer times
-    current_duration = time.time() - start_time
-    if (current_duration > longest_time):
-        #update longest time if it changes
-        longest_time = current_duration
-    current_value -= (current_value * (current_duration/longest_time))
+    #captures good events
+    countLoopforBuffer = False
+    if (red_score > prev_red_score and red_last_score):
+        countLoopforBuffer = True   
+    if (red_flag and not prev_red_flag and red_last_score):
+        countLoopforBuffer = True
 
-    heading = int(4 * heading / np.pi)   # Convert to range(8)
-    distance = int(8 * distance / 1250.)  # Convert to range(8)
-    
-    if 'previous_value' in Q_table:
-        previous_value = Q_table['previous_value']
-        previous_grid = Q_table['previous_grid']
-        previous_choice = Q_table['previous_choice']
-        reward = (current_value - previous_value) - 0.005
-        Q_value = Q_table[previous_grid][previous_choice]
-        Q_table[previous_grid][previous_choice] += reward
-
-    
-    if (np.random.random() < 0.2 
-        or  (heading, distance) not in Q_table):
-        yaw_choice = np.random.choice(yaw_actions)
-        vel_choice = np.random.choice(vel_actions)
-    else:
-        options = Q_table[(heading, distance)].keys()
-        highest = options[0]
-        highest_value = -1000
-        for option in options:
-            option_value = Q_table[(heading, distance)][option]
-            if option_value > highest_value:
-                highest = option
-                highest_value = option_value
-        if highest_value > 0:
-            print(highest_value)
-            yaw_choice, vel_choice = highest
-            expectation = highest_value
-        else:
-            yaw_choice = np.random.choice(yaw_actions)
-            vel_choice = np.random.choice(vel_actions)
-
-    if (heading, distance) not in Q_table:
-        Q_table[(heading, distance)] = {}
-    if (yaw_choice, vel_choice) not in Q_table[(heading, distance)]:
-        Q_table[(heading, distance)][(yaw_choice, vel_choice)] = 0.
-    Q_table['previous_value'] = current_value #reward
-    Q_table['previous_grid'] = (heading, distance) #state
-    Q_table['previous_choice'] = (yaw_choice, vel_choice) #action
-    
-    print("Yaw: {}, Vel: {}, Value: {}".format(yaw_choice, vel_choice, 
-        current_value))
-    yaw_choice = -yaw_choice # Switch from camera to world coordinates
-    red_twist = yaw_vel_to_twist(yaw_choice, vel_choice)
-
-    
-    return
-
-def Q_learningV2():
-    global Q_table, red_twist, yaw_actions, vel_actions, red_score, prev_red_score, center_nogo, buffCounter, choiceBuffer, gridBuffer
-    expectation = 0.
-
-    #Chose 10 actions because program would crash if agent scores without buffer being fully populated
-    #Assumed impossible to score in <2s therefore chose 10 commands @5Hz
-    SIZEOFBUFFER = 10
-    
-    #captures scoring event
-    if(red_score > prev_red_score):
-        #TODO reward faster times between scores
-        #TODO create circles around bad zones 
-        #TODO combos and DOE to find best combination
+    if(countLoopforBuffer):
         for entry in gridBuffer:
-            Q_table[gridBuffer[entry]][choiceBuffer[entry]] += 0.1
+            Q_table[gridBuffer[entry]][choiceBuffer[entry]] += 100 / buffCounter
             print('This is the new reward: ' + str(Q_table[gridBuffer[entry]][choiceBuffer[entry]]))
-        prev_red_score = red_score
+	print(time.time() - start_time)
+	start_time = time.time()
         
     # Determine Reward
     heading, distance, distCenter = get_heading_and_distance()
     current_value = (1 - distance / 1250) 
     if distCenter < center_nogo: # Scale
-        current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
+        current_value - .1 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
     
     heading = int(4 * heading / np.pi)   # Convert to range(8)
     distance = int(8 * distance / 1250.)  # Convert to range(8)
@@ -228,7 +155,7 @@ def Q_learningV2():
         Q_table[previous_grid][previous_choice] += reward
 
     
-    if (np.random.random() < 0.2 * 
+    if (np.random.random() < 0.2
         or  (heading, distance) not in Q_table):
         yaw_choice = np.random.choice(yaw_actions)
         vel_choice = np.random.choice(vel_actions)
@@ -257,9 +184,9 @@ def Q_learningV2():
     Q_table['previous_grid'] = (heading, distance) #state
     Q_table['previous_choice'] = (yaw_choice, vel_choice) #action
 
-    #populates the buffer of size SIZEOFBUFFER
-    choiceBuffer[buffCounter%SIZEOFBUFFER] = (yaw_choice, vel_choice)
-    gridBuffer[buffCounter%SIZEOFBUFFER] = (heading, distance)
+    #populates the buffer (A 2nd Q) with Counter locations
+    choiceBuffer[buffCounter] = (yaw_choice, vel_choice)
+    gridBuffer[buffCounter] = (heading, distance)
     buffCounter += 1
 
     print("Yaw: {}, Vel: {}, Value: {}".format(yaw_choice, vel_choice, 
@@ -267,7 +194,26 @@ def Q_learningV2():
     yaw_choice = -yaw_choice # Switch from camera to world coordinates
     red_twist = yaw_vel_to_twist(yaw_choice, vel_choice)
 
-    
+    #Determine Last Score
+    if (red_score > prev_red_score):
+        red_last_score = True
+        gridBuffer.clear
+        choiceBuffer.clear
+        buffCounter = 0
+        prev_red_score = red_score
+
+    if (blue_score > prev_blue_score):
+        red_last_score = False
+        gridBuffer.clear
+        choiceBuffer.clear
+        buffCounter = 0
+        prev_blue_score = blue_score
+
+    if (red_flag and not prev_red_flag):
+        gridBuffer.clear
+        choiceBuffer.clear
+        buffCounter = 0
+
     return
 
 # Init function
@@ -298,7 +244,7 @@ def learning_agent():
     previous_game_counter = current_game_counter
 
     #calculate size of circular no-go zone around center obstacle
-    sphero_radius = (red_base.x - blue_base.x) * (1 / 48)
+    sphero_radius = (red_base.x - blue_base.x) * (2 / 48)
     center_nogo = (red_base.x - blue_base.x)*.25/2 + sphero_radius
 
     # Agent control loop
@@ -322,4 +268,3 @@ if __name__ == '__main__':
         learning_agent()
     except rospy.ROSInterruptException:
         pass
-
