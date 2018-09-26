@@ -139,7 +139,7 @@ def Q_learning():
     heading, distance, distCenter = get_heading_and_distance()
     current_value = (1 - distance / 1250) 
     if distCenter < center_nogo: # Scale
-        current_value - .01 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
+        current_value - .1 # Scale to [1, ~0], .01 is the weighting of punishing the agent from going into the center area
     
     heading = int(4 * heading / np.pi)   # Convert to range(8)
     distance = int(8 * distance / 1250.)  # Convert to range(8)
@@ -198,12 +198,14 @@ def Q_learning():
 	gridBuffer[]
 	choiceBuffer[]
         buffCounter = 0
+	prev_red_score = red_score
 
     if (blue_score > prev_blue_score)
         red_last_score = False
 	gridBuffer[]
 	choiceBuffer[]
         buffCounter = 0
+        prev_blue_score = blue_score
 
     if (red_flag and !prev_ref_flag)
 	gridBuffer[]
