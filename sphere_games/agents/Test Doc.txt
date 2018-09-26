@@ -130,11 +130,10 @@ def Q_learning():
 
     if(countLoopforBuffer):
         for entry in gridBuffer:
-            Q_table[gridBuffer[entry]][choiceBuffer[entry]] += 100 / gridBuffer
+            Q_table[gridBuffer[entry]][choiceBuffer[entry]] += 100 / buffCounter
             print('This is the new reward: ' + str(Q_table[gridBuffer[entry]][choiceBuffer[entry]]))
 	print(time.time() - start_time)
 	start_time = time.time()
-        prev_red_score = red_score
         
     # Determine Reward
     heading, distance, distCenter = get_heading_and_distance()
@@ -196,10 +195,20 @@ def Q_learning():
     #Determine Last Score
     if (red_score > prev_red_score)
         red_last_score = True
+	gridBuffer[]
+	choiceBuffer[]
+        buffCounter = 0
 
     if (blue_score > prev_blue_score)
         red_last_score = False
+	gridBuffer[]
+	choiceBuffer[]
+        buffCounter = 0
 
+    if (red_flag and !prev_ref_flag)
+	gridBuffer[]
+	choiceBuffer[]
+        buffCounter = 0
 
     return
 
