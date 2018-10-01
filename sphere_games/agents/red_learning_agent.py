@@ -213,6 +213,9 @@ def Q_learning():
         gridBuffer.clear
         choiceBuffer.clear
         buffCounter = 0
+	
+	
+    prev_red_flag = red_flag
 
     return
 
